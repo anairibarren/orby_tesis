@@ -36,7 +36,7 @@ export default function RegisterDetail() {
 
     localStorage.setItem("register_data", JSON.stringify(all));
 
-    navigate("/register-verification", {
+   navigate("/register/provider/success", {
       state: all,
     });
   };

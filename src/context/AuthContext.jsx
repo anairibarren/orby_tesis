@@ -1,49 +1,67 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../services/supabase";
-import { 
-  loginUser, 
-  registerUser, 
+import {
+  loginUser,
+  registerUser,
   logoutUser,
-  loginWithGoogle
+  loginWithGoogle,
 } from "../services/auth";
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
 
-// PROVIDER GLOBAL
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Cargar sesión inicial
   useEffect(() => {
-    const getSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
-      setLoading(false);
+    let mounted = true;
+
+    const init = async () => {
+      try {
+        // Si esto falla o queda colgado, igual queremos salir del loading.
+        const { data, error } = await supabase.auth.getSession();
+
+        if (error) {
+          console.error("supabase.auth.getSession error:", error);
+        }
+
+        if (!mounted) return;
+
+        setSession(data?.session ?? null);
+        setUser(data?.session?.user ?? null);
+      } catch (err) {
+        console.error("getSession threw:", err);
+        if (!mounted) return;
+        setSession(null);
+        setUser(null);
+      } finally {
+        if (mounted) setLoading(false);
+      }
     };
 
-    getSession();
+    init();
 
-    // Escuchar cambios en la sesión
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => {
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
-      }
-    );
+    // Listener de cambios de sesión
+    const { data } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (!mounted) return;
+      setSession(newSession ?? null);
+      setUser(newSession?.user ?? null);
+      setLoading(false); // 🔥 por si entra antes que getSession o si getSession falla
+    });
 
-    return () => listener.subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      data?.subscription?.unsubscribe();
+    };
   }, []);
 
-  // Métodos publicados
   const login = async ({ email, password }) => {
     return await loginUser(email, password);
   };
 
   const loginGoogle = async () => {
-    return await loginWithGoogle(); 
+    return await loginWithGoogle();
   };
 
   const register = async ({ email, password }) => {
@@ -61,7 +79,7 @@ export function AuthProvider({ children }) {
         session,
         loading,
         login,
-        loginGoogle, 
+        loginGoogle,
         register,
         logout,
       }}
@@ -72,5 +90,9 @@ export function AuthProvider({ children }) {
 }
 
 export function useAuthContext() {
-  return useContext(AuthContext);
+  const ctx = useContext(AuthContext);
+  if (!ctx) {
+    throw new Error("useAuthContext debe usarse dentro de <AuthProvider>");
+  }
+  return ctx;
 }

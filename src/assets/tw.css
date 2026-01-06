@@ -99,3 +99,20 @@
 .card-container.flipped {
   transform: rotateY(180deg);
 }
+
+
+/* Fix del color de autofill (Chrome/Safari) */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+  box-shadow: 0 0 0 1000px #ffffff inset !important;
+  -webkit-text-fill-color: #111827 !important; /* gris oscuro */
+  transition: background-color 9999s ease-in-out 0s;
+}

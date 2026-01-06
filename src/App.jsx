@@ -1,21 +1,31 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuthContext } from "./context/AuthContext";
+import { useProviderContext } from "./context/ProviderContext";
 
 // Páginas públicas
 import Welcome from "./pages/Welcome";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+
+// Home cliente
 import Home from "./pages/Home";
 
-// Registro
+// ✅ Home prestador
+import ProviderHome from "./pages/providers/ProviderHome";
+
+// Registro (cliente)
 import AuthChoice from "./pages/register/AuthChoice";
 import RegisterDetail from "./pages/register/user/RegisterDetail";
-import RegisterVerification from "./pages/register/RegisterVerification";
 
 // Registro prestador
 import RegisterProfile from "./pages/register/provider/RegisterProfile";
 import RegisterProviderDetail from "./pages/register/provider/RegisterDetail";
+import RegisterSuccess from "./pages/register/provider/RegisterSuccess";
+
+// Páginas prestador (protegidas)
+import ProviderOnly from "./components/ProviderOnly";
+import PublishService from "./pages/providers/PublishService";
 
 // Páginas usuario cliente
 import Profile from "./pages/Profile";
@@ -41,11 +51,12 @@ import DataUsage from "./pages/legal/DataUsage";
 import AddPayment from "./components/AddPayment";
 import BookingPage from "./pages/booking/BookingPage";
 
-
 export default function App() {
   const { user, loading } = useAuthContext();
+  const { role, profileLoading } = useProviderContext();
 
-  if (loading) {
+  // Loader global
+  if (loading || (user && profileLoading)) {
     return (
       <div className="flex items-center justify-center h-screen bg-[#2A4691]">
         <div className="flex flex-col items-center">
@@ -58,12 +69,21 @@ export default function App() {
     );
   }
 
+  // helper: decidir home por rol
+  const HomeByRole = () => {
+    if (role === "provider") return <Navigate to="/provider/home" replace />;
+    return <Home />; // client (o si no hay role todavía)
+  };
+
   return (
     <BrowserRouter>
       <Routes>
         {user ? (
           <>
-            <Route path="/" element={<Home />} />
+            {/* ✅ ROOT: decide a dónde va según rol */}
+            <Route path="/" element={<HomeByRole />} />
+
+            {/* CLIENT ROUTES */}
             <Route path="/requests" element={<Requests />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/edit-profile" element={<EditProfile />} />
@@ -78,44 +98,52 @@ export default function App() {
             <Route path="/chat" element={<Chat />} />
             <Route path="/categories" element={<Categories />} />
             <Route path="/category/:categoryId" element={<CategoryList />} />
-            <Route
-              path="/providers/:categoryId/:serviceId"
-              element={<ProvidersList />}
-            />
-            <Route
-              path="/provider/:idPrestador"
-              element={<ProviderProfile />}
-            />
+            <Route path="/providers/:categoryId/:serviceId" element={<ProvidersList />} />
+            <Route path="/provider/:idPrestador" element={<ProviderProfile />} />
             <Route path="/problem-form" element={<ProblemForm />} />
             <Route path="/help" element={<HelpCenter />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/data-usage" element={<DataUsage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
             <Route path="/booking/:providerId" element={<BookingPage />} />
 
+            {/* PROVIDER HOME */}
+            <Route
+              path="/provider/home"
+              element={
+                <ProviderOnly>
+                  <ProviderHome />
+                </ProviderOnly>
+              }
+            />
+
+            {/* PROVIDER PUBLISH */}
+            <Route
+              path="/provider/publish"
+              element={
+                <ProviderOnly>
+                  <PublishService />
+                </ProviderOnly>
+              }
+            />
+
+            <Route path="*" element={<Navigate to="/" replace />} />
           </>
         ) : (
           <>
+            {/* PUBLIC */}
             <Route path="/" element={<Welcome />} />
             <Route path="/auth" element={<AuthChoice />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
 
+            {/* CLIENT REGISTER */}
             <Route path="/register-detail" element={<RegisterDetail />} />
-            <Route
-              path="/register-verification"
-              element={<RegisterVerification />}
-            />
 
-            <Route
-              path="/register/provider"
-              element={<RegisterProfile />}
-            />
-            <Route
-              path="/register/provider/detail"
-              element={<RegisterProviderDetail />}
-            />
+            {/* PROVIDER REGISTER */}
+            <Route path="/register/provider" element={<RegisterProfile />} />
+            <Route path="/register/provider/detail" element={<RegisterProviderDetail />} />
+            <Route path="/register/provider/success" element={<RegisterSuccess />} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </>
